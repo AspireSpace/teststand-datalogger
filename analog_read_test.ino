@@ -28,6 +28,8 @@ uint32_t current_addr = 0;
 
 volatile byte ready_to_write = 0; // yes, eight flags when we only need two, oh well
 
+bool getting_data = true;
+
 SPIFlashChip flashmem;
 
 void setup()
@@ -70,8 +72,11 @@ void setup()
 // ♫ ...you get nothing if you wait for it, wait for it, wait-!
 ISR(ADC_vect)
 {
-  circular_buffer[page_for_sampling].sample[sample_index] = ADCL; // need to read ADCL first, according to ATmega328 datasheet
-  circular_buffer[page_for_sampling].sample[sample_index]+= ADCH << 8;
+  if (getting_data)
+  {
+    circular_buffer[page_for_sampling].sample[sample_index] = ADCL; // need to read ADCL first, according to ATmega328 datasheet
+    circular_buffer[page_for_sampling].sample[sample_index]+= ADCH << 8;
+  }
 
   // set next sample to come from next channel.
   channel = (channel+1) % CHANNELS_TO_SAMPLE;
@@ -109,6 +114,7 @@ void loop()
   }
   else
   {
+    getting_data = false;
     Serial.print("Written all pages in ");
     Serial.print(micros()-t0);
     Serial.println(" us. Reading back.");
